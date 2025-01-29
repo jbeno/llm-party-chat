@@ -1,0 +1,5 @@
+websockets>=12.0
+transformers>=4.36.0
+torch>=2.1.0
+colorama>=0.4.6
+aioconsole>=0.6.1
