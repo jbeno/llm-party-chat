@@ -2,6 +2,7 @@
 import asyncio
 from websockets.asyncio.server import serve
 from websockets.exceptions import ConnectionClosed
+from websockets.server import ServerConnection
 import json
 from dataclasses import dataclass
 from typing import Dict, List
@@ -14,7 +15,7 @@ colorama.init()
 
 @dataclass
 class ModelClient:
-    connection: 'ServerConnection'
+    connection: ServerConnection
     name: str
     client_type: str  # 'model' or 'human'
     color: str
