@@ -2,15 +2,16 @@ from setuptools import setup, find_packages
 
 setup(
     name="llm-party-chat",
-    version="0.0.1",
+    version="0.1.0",  # Incremented for significant feature additions
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     install_requires=[
-        "websockets>=12.0",
-        "transformers>=4.36.0",
-        "torch>=2.1.0",
-        "colorama>=0.4.6",
-        "aioconsole>=0.6.1"
+        "websockets>=12.0,<15.0",
+        "transformers>=4.37.0,<5.0",
+        "torch>=2.1.0,<3.0",
+        "colorama>=0.4.6,<0.5.0",
+        "aioconsole>=0.6.1,<0.9.0",
+        "accelerate>=0.26.0,<0.27.0"
     ],
     python_requires=">=3.10",
     entry_points={

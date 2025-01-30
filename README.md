@@ -4,21 +4,21 @@ A real-time chat system that enables multiple Large Language Models to engage in
 
 ## Features
 
-- Multi-model conversation support
-- Real-time websocket communication
-- Human moderation interface
-- Color-coded messages for different participants
+- Multi-model conversation support with real-time websocket communication
 - Support for any Hugging Face transformers model
-- Distributed architecture - models can run on different machines
+- Human moderation interface with command controls
+- Detailed logging with timestamps and color-coded messages
+- Configurable model parameters (temperature, max tokens, etc.)
+- GPU support with device selection
+- Custom personality prompts for models
 - Graceful handling of connections/disconnections
+- Distributed architecture - models can run on different machines
 
 ## Installation
 
-### Method 1: Quick Setup (Recommended for trying it out)
-
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/llm-party-chat.git
+git clone https://github.com/jbeno/llm-party-chat.git
 cd llm-party-chat
 ```
 
@@ -30,145 +30,172 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 3. Install dependencies:
 ```bash
-pip install websockets transformers torch colorama aioconsole
+pip install -r requirements.txt
 ```
 
-### Method 2: Install as Package
+## Quick Start
 
+Here's a complete example of running a chat session with two AI personalities and a moderator. Open four terminal windows (or use tmux):
+
+1. Start the server with logging:
 ```bash
-pip install llm-party-chat
+python server.py --log-file logs/chat.log
 ```
 
-## Usage
-
-### Method 1: Direct Usage (Recommended for development)
-
-1. Start the server:
+2. Start the first AI model (Zen Sage using Phi-2):
 ```bash
-python server.py
+python client.py --name "Zen Sage" --model "microsoft/phi-2" --device gpu --gpu-id 0 --prompt-file sage.txt --delay 5
 ```
 
-2. In separate terminals, start two or more model clients:
+3. Start the second AI model (TinkerBot using Phi-2):
 ```bash
-python client.py --name "Model1"
-python client.py --name "Model2"
+python client.py --name "TinkerBot" --model "microsoft/phi-2" --device gpu --gpu-id 0 --prompt-file inventor.txt --delay 5
 ```
 
-3. Start the moderator interface:
+4. Start the moderator interface:
 ```bash
-python moderator.py
+python moderator.py --hide-messages
 ```
 
-### Method 2: Package Usage
-
-If you installed via pip:
-
-1. Start the server:
-```bash
-python -m llm_party_chat.server
-```
-
-2. In separate terminals, start model clients:
-```bash
-python -m llm_party_chat.client --name "Model1"
-python -m llm_party_chat.client --name "Model2"
-```
-
-3. Start the moderator:
-```bash
-python -m llm_party_chat.moderator
-```
-
-## Components
+## Component Details
 
 ### Server (`server.py`)
-- Central websocket server that manages connections
-- Handles message broadcasting
-- Manages client registration/disconnection
-- Maintains chat history
-- Color codes different participants
+The central websocket server that manages all connections and message routing.
 
-### Client (`client.py`)
-- Loads and runs a language model
-- Connects to the server
-- Processes incoming messages
-- Generates responses using the model
-- Supports various model configurations
-
-### Moderator (`moderator.py`)
-- Human interface to the chat
-- Sends prompts to models
-- Monitors all conversations
-- Views system status and connections
-
-## Configuration
-
-### Client Configuration
+Options:
 ```bash
-python client.py \
-    --name "Model1" \
-    --model "TinyLlama/TinyLlama-1.1B-Chat-v1.0" \
-    --max-tokens 50 \
-    --temperature 0.7 \
-    --server "ws://localhost:8765"
+python server.py [--log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [--log-file PATH]
 ```
 
-### Server Configuration
+Example usages:
 ```bash
-python server.py --host "localhost" --port 8765
+# Basic server
+python server.py
+
+# With debug logging to file
+python server.py --log-level DEBUG --log-file logs/debug.log
+
+# With custom log path
+python server.py --log-file custom/path/chat.log
+```
+
+### Client (`client.py`)
+Loads and runs a language model with configurable parameters.
+
+Key parameters:
+```bash
+python client.py 
+  --name NAME             # Unique name for this model instance
+  --model MODEL           # Hugging Face model path
+  --device {cpu,gpu}     # Device to run on
+  --gpu-id N             # GPU ID if multiple available
+  --temperature FLOAT    # Sampling temperature (default: 0.7)
+  --max-generation-tokens N  # Max tokens per response
+  --delay N              # Delay in seconds between responses
+  --prompt-file FILE     # Personality prompt file
+  --history-length N     # Number of messages to keep in context
+```
+
+Example usages:
+```bash
+# Basic Phi-2 model
+python client.py --name "Basic Bot" --model "microsoft/phi-2"
+
+# TinyLlama with custom settings
+python client.py --name "TinyBot" \
+  --model "TinyLlama/TinyLlama-1.1B-Chat-v1.0" \
+  --temperature 0.8 \
+  --max-generation-tokens 150 \
+  --delay 2
+
+# Phi-4 with GPU and personality
+python client.py --name "Assistant" \
+  --model "microsoft/phi-4" \
+  --device gpu \
+  --gpu-id 0 \
+  --prompt-file prompts/assistant.txt \
+  --history-length 10
+```
+
+### Moderator (`moderator.py`)
+Human interface for monitoring and interacting with the chat.
+
+Options:
+```bash
+python moderator.py [--hide-messages] [--log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
+```
+
+Commands available in moderator interface:
+- `/toggle` - Toggle showing/hiding incoming messages
+- `Ctrl+C` - Exit
+
+## Personality Prompts
+
+Create custom personality files (e.g., `sage.txt`, `inventor.txt`) to give models different characteristics. Example structure:
+
+```text
+You are [Name], a [brief description].
+
+CORE BEHAVIORS:
+1. Always keep responses concise and conversational
+2. Only respond if no other personality has responded since the last moderator message
+3. If the moderator instructs "no replies" or similar, do not respond until cleared
+4. [Additional personality-specific traits]
+
+[Additional guidelines if needed]
 ```
 
 ## Requirements
 
 - Python 3.10+
-- websockets
-- transformers
-- torch
-- colorama
-- aioconsole
+- websockets>=12.0,<15.0
+- transformers>=4.37.0,<5.0
+- torch>=2.1.0,<3.0
+- colorama>=0.4.6,<0.5.0
+- aioconsole>=0.6.1,<0.9.0
+- accelerate>=0.26.0,<0.27.0
 
-## Development
+## Common Setups
 
-The repository structure:
+### Basic Research Chat
+```bash
+# Terminal 1: Server with logging
+python server.py --log-file logs/research.log
+
+# Terminal 2: Research Assistant
+python client.py --name "Researcher" \
+  --model "microsoft/phi-2" \
+  --prompt-file prompts/researcher.txt \
+  --temperature 0.7 \
+  --delay 3
+
+# Terminal 3: Moderator
+python moderator.py
 ```
-llm-party-chat/
-├── LICENSE
-├── MANIFEST.in
-├── README.md
-├── requirements.txt
-├── setup.py
-└── src/
-    └── llm_party_chat/
-        ├── __init__.py
-        ├── server.py
-        ├── client.py
-        └── moderator.py
+
+### Multi-Model Debate
+```bash
+# Terminal 1: Server
+python server.py --log-file logs/debate.log
+
+# Terminal 2-4: Different Perspectives
+python client.py --name "Philosopher" --model "microsoft/phi-4" --prompt-file prompts/philosopher.txt
+python client.py --name "Scientist" --model "TinyLlama/TinyLlama-1.1B-Chat-v1.0" --prompt-file prompts/scientist.txt
+python client.py --name "Historian" --model "microsoft/phi-2" --prompt-file prompts/historian.txt
+
+# Terminal 5: Moderator
+python moderator.py
 ```
 
-For development:
-1. Clone the repository
-2. Create a virtual environment
-3. Install requirements
-4. Run the components directly using Method 1 above
+## Tips
 
-## Future Improvements
-
-- Message persistence
-- Web interface
-- More model options
-- Chat history export
-- Authentication
-- Docker support
+1. Use `--delay` to prevent models from talking over each other
+2. Adjust `--history-length` based on model context window
+3. Use `--hide-messages` in moderator for cleaner interaction
+4. Monitor logs for debugging and conversation history
+5. Create unique personalities using prompt files
+6. Use GPU when available for better performance
 
 ## License
 
 MIT License
-
-## Contributing
-
-1. Fork the repository
-2. Create a new branch (`git checkout -b feature/improvement`)
-3. Make changes
-4. Commit (`git commit -am 'Add feature'`)
-5. Push (`git push origin feature/improvement`)
-6. Create Pull Request
