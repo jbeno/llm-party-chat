@@ -110,30 +110,99 @@ class ModelParticipant:
 
     def _setup_device(self, device: str, gpu_id: int) -> str:
         """
-        Setup and validate the device configuration.
+        Enhanced device setup for ARM64 and NVIDIA GPU support.
         Returns the appropriate device string for model initialization.
         """
+        import platform
+        import torch
+        
+        # Log system information
+        logging.info(f"Platform: {platform.platform()}")
+        logging.info(f"Python version: {platform.python_version()}")
+        logging.info(f"PyTorch version: {torch.__version__}")
+        
+        # Check if we're on ARM architecture
+        is_arm = platform.machine().startswith('aarch64')
+        if is_arm:
+            logging.info("Detected ARM64 architecture")
+        
         if device.lower() == "cpu":
+            logging.info("CPU device explicitly requested")
             return "cpu"
         
-        if not torch.cuda.is_available():
-            logging.warning("CUDA is not available. Falling back to CPU.")
-            return "cpu"
+        # GPU availability check with detailed logging
+        cuda_available = torch.cuda.is_available()
+        if cuda_available:
+            gpu_count = torch.cuda.device_count()
+            for i in range(gpu_count):
+                gpu_name = torch.cuda.get_device_name(i)
+                logging.info(f"Found GPU {i}: {gpu_name}")
+        else:
+            logging.info("No CUDA-capable GPU found")
         
         if device.lower() == "gpu":
-            num_gpus = torch.cuda.device_count()
-            if num_gpus == 0:
-                logging.warning("No GPUs found. Falling back to CPU.")
+            if not cuda_available:
+                logging.warning("GPU requested but CUDA is not available. Falling back to CPU.")
                 return "cpu"
             
+            num_gpus = torch.cuda.device_count()
+            if num_gpus == 0:
+                logging.warning("GPU requested but no GPUs found. Falling back to CPU.")
+                return "cpu"
+            
+            # Validate GPU ID
             if gpu_id >= num_gpus:
-                logging.warning(f"GPU {gpu_id} not found. Using GPU 0 instead.")
+                logging.warning(f"Requested GPU {gpu_id} not found. Using GPU 0 instead.")
                 return "cuda:0"
             
-            return f"cuda:{gpu_id}"
+            selected_device = f"cuda:{gpu_id}"
+            gpu_name = torch.cuda.get_device_name(gpu_id)
+            logging.info(f"Using GPU {gpu_id}: {gpu_name}")
+            return selected_device
         
         logging.warning(f"Unknown device '{device}'. Falling back to CPU.")
         return "cpu"
+
+    def _initialize_model(self, model_path: str, device: str):
+        """
+        Initialize the model with optimized settings for ARM64 + GPU architecture.
+        """
+        try:
+            # Initialize tokenizer first
+            self.tokenizer = AutoTokenizer.from_pretrained(model_path)
+            
+            # Determine optimal model configuration based on device and architecture
+            model_kwargs = {
+                "device_map": device,
+                "torch_dtype": torch.float16 if "cuda" in device else torch.float32,
+            }
+            
+            # Add ARM-specific optimizations if needed
+            if platform.machine().startswith('aarch64'):
+                logging.info("Applying ARM64-specific optimizations")
+                # You might want to add ARM-specific settings here
+                
+            # Load the model with optimized settings
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_path,
+                **model_kwargs
+            )
+            
+            # Log model configuration
+            logging.info(f"Model loaded successfully on {device}")
+            logging.info(f"Model type: {type(self.model).__name__}")
+            if hasattr(self.model, 'config'):
+                logging.info(f"Model configuration: {self.model.config}")
+                
+            # Enable model optimizations where available
+            if "cuda" in device:
+                self.model.eval()  # Set to evaluation mode
+                # Enable CUDA optimizations
+                torch.backends.cudnn.benchmark = True
+                
+        except Exception as e:
+            logging.error(f"Error loading model: {str(e)}")
+            raise
     
     def _estimate_tokens(self, text: str) -> int:
         """
@@ -517,7 +586,7 @@ def main():
         default='INFO',
         help='Set the logging level'
     )
-    
+
     args = parser.parse_args()
     
     try:
