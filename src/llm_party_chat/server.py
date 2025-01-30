@@ -69,9 +69,8 @@ class PartyChat:
                 )
 
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                log_message = f"[{timestamp}] {client_name} ({client_type}) joined the chat"
-                # Only log to file, console output handled by logging
-                logging.info(f"{Fore.WHITE}{log_message}{Style.RESET_ALL}")
+                log_message = f"[{timestamp}] {color}{client_name} ({client_type}) joined the chat{Style.RESET_ALL}"
+                logging.info(log_message)
 
                 await connection.send(json.dumps({
                     "type": "system",
@@ -94,9 +93,8 @@ class PartyChat:
             if client_id:
                 client = self.clients[client_id]
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                log_message = f"[{timestamp}] {client.name} ({client.client_type}) left the chat"
-                # Only log to file, console output handled by logging
-                logging.info(f"{Fore.WHITE}{log_message}{Style.RESET_ALL}")
+                log_message = f"[{timestamp}] {client.color}{client.name} ({client.client_type}) left the chat{Style.RESET_ALL}"
+                logging.info(log_message)
                 del self.clients[client_id]
 
     async def broadcast(self, message: dict, source_id: str) -> None:
@@ -110,9 +108,9 @@ class PartyChat:
         source_client = self.clients.get(source_id)
 
         if source_client:
-            log_message = f"[{timestamp}] {message.get('from', 'Unknown')} ({source_client.client_type}): {message.get('content', '')}"
-            # Only log to file, console output handled by logging
-            logging.info(f"{Fore.WHITE}{log_message}{Style.RESET_ALL}")
+            if source_client:
+                log_message = f"[{timestamp}] {source_client.color}{message.get('from', 'Unknown')} ({source_client.client_type}): {message.get('content', '')}{Style.RESET_ALL}"
+                logging.info(log_message)
 
         # Create a safe copy of clients for iteration
         async with self._lock:
@@ -202,19 +200,31 @@ def setup_logging(log_level: str, log_file: str | None = None) -> None:
     if not isinstance(numeric_level, int):
         raise ValueError(f"Invalid log level: {log_level}")
 
-    # Create formatters
-    console_formatter = logging.Formatter('%(message)s')
-    file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    class ColorStripper(logging.Formatter):
+        """Strip color codes when writing to file"""
+        def format(self, record):
+            # Save original message
+            original_msg = record.msg
+            # Strip color codes for file
+            if isinstance(record.msg, str):
+                record.msg = str(record.msg).replace(Fore.WHITE, '').replace(Fore.GREEN, '')\
+                    .replace(Fore.BLUE, '').replace(Fore.YELLOW, '').replace(Fore.MAGENTA, '')\
+                    .replace(Fore.CYAN, '').replace(Style.RESET_ALL, '')
+            # Format the message
+            formatted = super().format(record)
+            # Restore original message
+            record.msg = original_msg
+            return formatted
 
     # Setup handlers
     handlers = []
     
-    # Console handler
+    # Console handler - keep colors
     console_handler = logging.StreamHandler()
-    console_handler.setFormatter(console_formatter)
+    console_handler.setFormatter(logging.Formatter('%(message)s'))
     handlers.append(console_handler)
 
-    # File handler (if specified)
+    # File handler - strip colors
     if log_file:
         # Create logs directory if it doesn't exist
         log_dir = os.path.dirname(log_file)
@@ -222,7 +232,7 @@ def setup_logging(log_level: str, log_file: str | None = None) -> None:
             os.makedirs(log_dir, exist_ok=True)
             
         file_handler = logging.FileHandler(log_file, encoding='utf-8')
-        file_handler.setFormatter(file_formatter)
+        file_handler.setFormatter(ColorStripper('%(asctime)s - %(levelname)s - %(message)s'))
         handlers.append(file_handler)
 
     # Configure logging
