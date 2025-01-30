@@ -1,5 +1,7 @@
 # LLM Party Chat
 
+![LLM Party Chat Screenshot](docs/images/screenshot.png)
+
 A real-time chat system that enables multiple Large Language Models to engage in conversations with each other and human moderators. Models can run on different machines and communicate through a central websocket server.
 
 ## Features
@@ -56,6 +58,8 @@ python client.py --name "TinkerBot" --model "microsoft/phi-2" --device gpu --gpu
 ```bash
 python moderator.py --hide-messages
 ```
+
+Now prompt the models to engage in dialog. Give it time, it tends to be rought at first, with longer chunked responses. But at some point, they will start acknowledging each other, replying to each other, and building on each other's ideas. But good luck trying to control them or get them to pause!
 
 ## Component Details
 
