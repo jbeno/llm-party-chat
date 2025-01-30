@@ -70,8 +70,8 @@ class PartyChat:
 
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 log_message = f"[{timestamp}] {client_name} ({client_type}) joined the chat"
-                print(f"{Fore.WHITE}{log_message}{Style.RESET_ALL}")
-                logging.info(log_message)
+                # Only log to file, console output handled by logging
+                logging.info(f"{Fore.WHITE}{log_message}{Style.RESET_ALL}")
 
                 await connection.send(json.dumps({
                     "type": "system",
@@ -95,8 +95,8 @@ class PartyChat:
                 client = self.clients[client_id]
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 log_message = f"[{timestamp}] {client.name} ({client.client_type}) left the chat"
-                print(f"{Fore.WHITE}{log_message}{Style.RESET_ALL}")
-                logging.info(log_message)
+                # Only log to file, console output handled by logging
+                logging.info(f"{Fore.WHITE}{log_message}{Style.RESET_ALL}")
                 del self.clients[client_id]
 
     async def broadcast(self, message: dict, source_id: str) -> None:
@@ -111,8 +111,8 @@ class PartyChat:
 
         if source_client:
             log_message = f"[{timestamp}] {message.get('from', 'Unknown')} ({source_client.client_type}): {message.get('content', '')}"
-            print(f"{Fore.WHITE}{log_message}{Style.RESET_ALL}")
-            logging.info(log_message)
+            # Only log to file, console output handled by logging
+            logging.info(f"{Fore.WHITE}{log_message}{Style.RESET_ALL}")
 
         # Create a safe copy of clients for iteration
         async with self._lock:
@@ -241,17 +241,15 @@ async def main(log_level: str = "INFO", log_file: str | None = None) -> None:
     server_port = 8765
     
     startup_message = f"Starting server on ws://{server_host}:{server_port}"
-    logging.info(startup_message)
-    print(f"{Fore.WHITE}{startup_message}")
+    logging.info(f"{Fore.WHITE}{startup_message}{Style.RESET_ALL}")
     
     if log_file:
         log_notice = f"Logging to file: {log_file}"
-        print(f"{Fore.WHITE}{log_notice}")
-        logging.info(log_notice)
+        logging.info(f"{Fore.WHITE}{log_notice}{Style.RESET_ALL}")
     
-    print(f"Log level: {log_level}")
-    print(f"Waiting for connections...")
-    print(f"(Use {Fore.GREEN}python moderator.py{Fore.WHITE} to join as a human moderator){Style.RESET_ALL}")
+    logging.info(f"{Fore.WHITE}Log level: {log_level}{Style.RESET_ALL}")
+    logging.info(f"{Fore.WHITE}Waiting for connections...{Style.RESET_ALL}")
+    logging.info(f"{Fore.WHITE}(Use {Fore.GREEN}python moderator.py{Fore.WHITE} to join as a human moderator){Style.RESET_ALL}")
 
     try:
         async with serve(handler, server_host, server_port):
