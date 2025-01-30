@@ -59,7 +59,7 @@ python client.py --name "TinkerBot" --model "microsoft/phi-2" --device gpu --gpu
 python moderator.py --hide-messages
 ```
 
-Now prompt the models to engage in dialog. Give it time, it tends to be rought at first, with longer chunked responses. But at some point, they will start acknowledging each other, replying to each other, and building on each other's ideas. But good luck trying to control them or get them to pause!
+Now prompt the models to engage in dialog. Give it time, it tends to be rough at first, with longer chunked responses. But at some point, they will start acknowledging each other, replying to each other, and building on each other's ideas -- but good luck trying to control them or get them to pause!
 
 ## Component Details
 
